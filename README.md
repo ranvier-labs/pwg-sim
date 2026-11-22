@@ -70,6 +70,7 @@ DMD duty cycles ─(Mitsuba thin-lens projection, defocus, Airy blur)─► irra
 | `pwg/mmwg.py` | Programmable multimode waveguide (PMW): N guided modes as the vector basis, computed as exact eigenvectors of the discrete BPM step operator. Δn ∈ [0, Δn_max] programmed in the core. |
 | `pwg/roughness.py` | Sidewall roughness: Ornstein–Uhlenbeck edge processes (exponential ACF), explicit in the BPM, plus coupled-mode / Fermi-golden-rule radiation, intermodal and backscatter rates. |
 | `pwg/noise.py` | Shot noise, read noise and RIN. |
+| `pwg/diffusion.py` | Shot-noise-driven photonic denoising diffusion: VP-SDE in excess-score ($v$-prediction) coordinates, exact dual-photodiode Poisson balanced-homodyne detection, Cayley unitary score networks (`UnitaryScoreNet`), and physical BPM waveguide compilation. |
 
 ## Results
 
@@ -356,6 +357,42 @@ the lateral NA is high. At NA 0.3 the length bandwidth term ends it around 10⁴
 with today's Δn ≈ 1e-3 it ends around 6k. The deciding factors are Δn_max, NA
 and programming resolution (section 4c), not propagation loss.
 
+### 7. Shot-noise-driven photonic denoising diffusion (`pwg/diffusion.py`, `experiments/diffusion_*.py`)
+
+![diffusion_kl](figures/fig_diffusion_kl.png)
+![diffusion_mnist](figures/fig_diffusion_mnist.png)
+
+Rewriting the reverse-time VP-SDE in excess-score ($v$-prediction) coordinates
+decomposes each reverse step into passive state attenuation plus a learned
+photonic score increment whose balanced-homodyne vacuum shot noise is
+calibrated analytically (via a single deterministic laser-amplitude schedule
+$\tilde c_m$) to equal the exact reverse-SDE Brownian variance—requiring zero
+external random number generation. By the Fokker–Planck / de Bruijn identity,
+total useful signal photons converge as $T \to \infty$ to the finite,
+step-count-independent bound
+$N_{\text{phot,useful}}^{\min} = [\mathrm{KL}(p_\epsilon\|\gamma) - \mathrm{KL}(p_1\|\gamma)]/(2\eta_{\text{tot}})$
+($\approx 0.347/\eta_{\text{tot}}$ photons per bit of relative entropy):
+
+* **2D 8-mode ring (`experiments/diffusion_kl_theorem.py`):** Exact Poisson
+  balanced-homodyne residual readout converges to $1.04\text{--}1.06$ photons/sample
+  across $T = 40\text{--}640$ (theoretical $N_{\text{KL}} = 1.0556$ ph; $0.0008$
+  ph/mode/step at $T = 640$, $6.4\times 10^4\times$ below full-state readout).
+  Three compiled $N = 16$ MgO:LN/SRN BPM waveguides ($F_n \ge 0.9995$) reproduce
+  all 8 modes ($\mathrm{MMD}^2 = 0.0042$, unchanged at $50\text{ nm}$ sidewall roughness).
+* **8×8 MNIST generation (`experiments/diffusion_mnist.py`):** A 6-layer
+  $N = 64$ complex unitary score network compiled onto six $2.5\text{ mm}$
+  shallow-etched MgO:LN/SRN BPM waveguides ($\text{NA} = 0.45$, $F_n = 0.9977\text{--}0.9999$,
+  field equivalence $5.2\times 10^{-6}$) generates $8\times 8$ digits across all
+  10 classes purely from exact Poisson balanced-homodyne counts: $85.6\%$ accuracy
+  ($\text{FD} = 0.211$) at $T = 60$ and $83.8\%$ ($\text{FD} = 0.226$) at $T = 120$
+  (digital PRNG: $83.6\%$, $\text{FD} = 0.242$), using only $86.0$ useful ($220.6$
+  launched, $28.3\text{ aJ}$) signal photons per digit ($325\times$ below full-state
+  readout). Uncalibrated $50\text{ nm}$ sidewall roughness ($82.3\%$), $4.2\,\mu\text{m}$
+  SRN cavity perturbation ($82.7\%$), hidden-layer shot noise ($86.3\%$ at $200$ ph/mode),
+  and correlated temporal drift ($83.7\%$ at $\sigma = 0.20$) are well tolerated,
+  whereas uncalibrated transverse PSF blur above $\lambda/(2\text{NA}) = 1.72\,\mu\text{m}$
+  causes sharp degradation ($41.4\%$ at $r = 2.0\,\mu\text{m}$).
+
 ## Approximations and limitations
 
 * **Effective-index reduction** (2D in-plane) of a 3D device; validated
@@ -395,6 +432,8 @@ PYTHONPATH=. .venv/bin/python experiments/control_rank.py
 PYTHONPATH=. .venv/bin/python experiments/scaling_explained.py
 PYTHONPATH=. .venv/bin/python experiments/make_figures.py
 PYTHONPATH=. .venv/bin/python experiments/pub_figures.py
+PYTHONPATH=. .venv/bin/python experiments/diffusion_kl_theorem.py
+PYTHONPATH=. .venv/bin/python experiments/diffusion_mnist.py
 ```
 
 Developed on an NVIDIA GB10 (CUDA, Dr.Jit 1.5, Mitsuba 3.9).

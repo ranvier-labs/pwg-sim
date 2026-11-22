@@ -144,62 +144,79 @@ def main():
 
     # ------------------------------------------------------------------
     # Part 1B: Finite LO power & read noise phase diagram (sigma_read = 30 e-)
+    # Average over 5 independent seeds (2000 samples each) for low-variance MMD^2!
     # ------------------------------------------------------------------
     lo_grid = [1e2, 3e2, 1e3, 3e3, 1e4, 3e4, 1e5, 3e5, 1e6]
     lo_sweep = []
     for n_lo in lo_grid:
         det_lo = HomodyneDetector(eta_qe=0.8, eta_chip=0.90, lo_photons_per_mode=n_lo, read_noise_e=30.0)
-        s_lo, st_lo = sample_photonic_diffusion(
-            exact_score, sched, det_lo, shape=(2000, 2), n_steps=100,
-            rng=np.random.default_rng(500), mode="homodyne_residual",
+        mmds, rstds, rmeans, mdists = [], [], [], []
+        ex_read_vals, ex_lo_vals = [], []
+        for s_idx in range(5):
+            s_lo, st_lo = sample_photonic_diffusion(
+                exact_score, sched, det_lo, shape=(2500, 2), n_steps=120,
+                rng=np.random.default_rng(500 + 17 * s_idx), mode="homodyne_residual",
+            )
+            m_i = ring_metrics(s_lo, ref_samples, gmm)
+            mmds.append(m_i["mmd2"])
+            rstds.append(m_i["r_std"])
+            rmeans.append(m_i["r_mean"])
+            mdists.append(m_i["mean_mode_dist"])
+            ex_read_vals.append(st_lo["mean_excess_read_var_frac"])
+            ex_lo_vals.append(st_lo["max_excess_lo_var_frac"])
+        m_lo = dict(
+            r_mean=float(np.mean(rmeans)),
+            r_std=float(np.mean(rstds)),
+            mean_mode_dist=float(np.mean(mdists)),
+            mmd2=float(np.mean(mmds)),
+            mmd2_std=float(np.std(mmds) / math.sqrt(len(mmds))),
         )
-        m_lo = ring_metrics(s_lo, ref_samples, gmm)
         lo_sweep.append(dict(
             lo_photons_per_mode=n_lo,
-            excess_read_var_frac=st_lo["mean_excess_read_var_frac"],
-            max_excess_lo_var_frac=st_lo["max_excess_lo_var_frac"],
+            excess_read_var_frac=float(np.mean(ex_read_vals)),
+            max_excess_lo_var_frac=float(np.mean(ex_lo_vals)),
             metrics=m_lo,
         ))
-        print(f"  LO={n_lo:8.0f} ph/mode (read_noise=30e): excess_read={st_lo['mean_excess_read_var_frac']:.4f}, "
+        print(f"  LO={n_lo:8.0f} ph/mode (read_noise=30e): excess_read={np.mean(ex_read_vals):.4f}, "
               f"r_std={m_lo['r_std']:.3f}, MMD2={m_lo['mmd2']:.5f}", flush=True)
 
     # ------------------------------------------------------------------
-    # Part 1C: Train N=16 UnitaryScoreNet on 2D ring & compile to physical BPM
+    # Part 1C: Train 4-layer N=16 UnitaryScoreNet on 2D ring & compile to physical BPM
     # ------------------------------------------------------------------
-    print("\nTraining 3-layer N=16 UnitaryScoreNet on 2D 8-mode ring...", flush=True)
+    print("\nTraining 4-layer N=16 UnitaryScoreNet on 2D 8-mode ring...", flush=True)
     cfg = PhotonicNetConfig(
-        data_dim=2, n_modes=16, n_layers=3, time_dim=16,
+        data_dim=2, n_modes=16, n_layers=4, time_dim=16,
         nonlinearity="silu", eta_chip=0.99, ancilla_reg=0.0, seed=11,
     )
     net = UnitaryScoreNet(cfg)
-    opt = ComplexAdam(net, lr=5e-3)
+    opt = ComplexAdam(net, lr=6e-3)
     ema = {k: v.copy() for k, v in net.param_items()}
     rng_tr = np.random.default_rng(7)
-    n_iters = 10000
+    n_iters = 22000
     for it in range(1, n_iters + 1):
-        x0 = gmm.sample(256, rng_tr)
-        u = rng_tr.uniform(0.0, 1.0, size=(256,))
-        t_b = sched.eps + (1.0 - sched.eps) * (u ** 1.8)
+        x0 = gmm.sample(512, rng_tr)
+        u = rng_tr.uniform(0.0, 1.0, size=(512,))
+        t_b = sched.eps + (1.0 - sched.eps) * (u ** 2.3)
         a_b, s_b = sched.alpha_sigma(t_b)
         eps_b = rng_tr.normal(size=x0.shape)
         xt = a_b[:, None] * x0 + s_b[:, None] * eps_b
         tgt = s_b[:, None] * x0 - a_b[:, None] * eps_b
-        lr_now = 5e-3 * 0.5 * (1.0 + math.cos(math.pi * it / n_iters))
+        lr_now = 2e-4 + (6e-3 - 2e-4) * 0.5 * (1.0 + math.cos(math.pi * it / n_iters))
         loss, grads = net.loss_and_grads(xt, t_b, tgt)
-        opt.step(grads, lr=max(lr_now, 2e-4))
+        opt.step(grads, lr=lr_now)
         for k, v in net.param_items():
-            ema[k] = 0.996 * ema[k] + 0.004 * v if it > 500 else v.copy()
-        if it % 2500 == 0:
+            ema[k] = 0.997 * ema[k] + 0.003 * v if it > 500 else v.copy()
+        if it % 5500 == 0:
             print(f"  it {it:5d}/{n_iters}: loss={loss:.4f}, out_gain={net.out_gain[0]:.3f}", flush=True)
     for k, v in net.param_items():
         v[...] = ema[k]
 
-    # Compile all 3 N=16 unitaries into physical shallow-etched MgO:LN/SRN BPM waveguides
-    print("\nCompiling 3 x N=16 unitaries into physical MgO:LN/SRN BPM waveguides...", flush=True)
+    # Compile all 4 N=16 unitaries into physical shallow-etched MgO:LN/SRN BPM waveguides
+    print("\nCompiling 4 x N=16 unitaries into physical MgO:LN/SRN BPM waveguides...", flush=True)
     Us = net.get_unitaries()
     compiled = []
     for l, U_l in enumerate(Us):
-        c_res = compile_unitary_to_bpm(U_l, na=0.3, length_um=1250.0, dn_max=5e-3, res_um=1.0, iters=150, seed=l)
+        c_res = compile_unitary_to_bpm(U_l, na=0.3, length_um=1250.0, dn_max=5e-3, res_um=1.0, iters=120, seed=l)
         compiled.append(c_res)
         print(f"  Layer {l}: F={c_res['F']:.4f}, F_n={c_res['Fn']:.5f}, eta_actual={c_res['eta_actual']:.4f}", flush=True)
 
@@ -237,23 +254,23 @@ def main():
         return fn
 
     samp_dig, _ = sample_photonic_diffusion(
-        make_fn(None), sched, det_bpm, shape=(2000, 2), n_steps=100,
+        make_fn(None), sched, det_bpm, shape=(2000, 2), n_steps=160,
         rng=np.random.default_rng(801), mode="digital",
     )
     samp_bpm, st_bpm = sample_photonic_diffusion(
-        make_fn(T_bpm), sched, det_bpm, shape=(2000, 2), n_steps=100,
+        make_fn(T_bpm), sched, det_bpm, shape=(2000, 2), n_steps=160,
         rng=np.random.default_rng(802), mode="homodyne_residual",
-        record_steps=[0, 25, 50, 75, 100],
+        record_steps=[0, 40, 80, 120, 160],
     )
 
-    # Uncalibrated sidewall roughness sigma = 50 nm on all 3 compiled chips
+    # Uncalibrated sidewall roughness sigma = 50 nm on all 4 compiled chips
     T_rough50 = [
         evaluate_compiled_bpm(c["theta"], c["cfg"], c["D_phase"], c["global_phase"],
                               rough_sigma_nm=50.0, rough_lc_um=0.2, rough_seed=10 + l)[0]
         for l, c in enumerate(compiled)
     ]
     samp_r50, st_r50 = sample_photonic_diffusion(
-        make_fn(T_rough50), sched, det_bpm, shape=(2000, 2), n_steps=100,
+        make_fn(T_rough50), sched, det_bpm, shape=(2000, 2), n_steps=160,
         rng=np.random.default_rng(803), mode="homodyne_residual",
     )
 
@@ -299,10 +316,10 @@ def main():
         samp_bpm=samp_bpm,
         samp_r50=samp_r50,
         traj_0=st_bpm["traj"][0],
-        traj_25=st_bpm["traj"][25],
-        traj_50=st_bpm["traj"][50],
-        traj_75=st_bpm["traj"][75],
-        traj_100=st_bpm["traj"][100],
+        traj_40=st_bpm["traj"][40],
+        traj_80=st_bpm["traj"][80],
+        traj_120=st_bpm["traj"][120],
+        traj_160=st_bpm["traj"][160],
     )
     print(f"Saved Experiment 1 to {OUT_DIR} in {time.time() - t0:.1f}s")
 

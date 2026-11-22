@@ -71,6 +71,7 @@ DMD duty cycles ─(Mitsuba thin-lens projection, defocus, Airy blur)─► irra
 | `pwg/roughness.py` | Sidewall roughness: Ornstein–Uhlenbeck edge processes (exponential ACF), explicit in the BPM, plus coupled-mode / Fermi-golden-rule radiation, intermodal and backscatter rates. |
 | `pwg/noise.py` | Shot noise, read noise and RIN. |
 | `pwg/diffusion.py` | Shot-noise-driven photonic denoising diffusion: VP-SDE in excess-score ($v$-prediction) coordinates, exact dual-photodiode Poisson balanced-homodyne detection, Cayley unitary score networks (`UnitaryScoreNet`), and physical BPM waveguide compilation. |
+| `pwg/cavity_diffusion.py` | All-optical nonlinear cavity feedback (`OpticalCavityScoreNet` with passive $\chi^{(3)}$ Kerr and saturable-absorber nonlinearities, exact Wirtinger BPTT, intracavity loss/SA vacuum noise) and folded single-process reverse diffusion (`sample_folded_optical_diffusion` with complex-mode packing, uniform log-SNR passive storage ring, and branch OPA ASE noise). |
 
 ## Results
 
@@ -392,6 +393,23 @@ $N_{\text{phot,useful}}^{\min} = [\mathrm{KL}(p_\epsilon\|\gamma) - \mathrm{KL}(
   and correlated temporal drift ($83.7\%$ at $\sigma = 0.20$) are well tolerated,
   whereas uncalibrated transverse PSF blur above $\lambda/(2\text{NA}) = 1.72\,\mu\text{m}$
   causes sharp degradation ($41.4\%$ at $r = 2.0\,\mu\text{m}$).
+* **All-optical nonlinear cavity & folded single-process diffusion (`experiments/diffusion_cavity.py`):**
+  Replacing electronic O–E–O hidden activations with passive $\chi^{(3)}$ Kerr +
+  saturable-absorber nonlinearities inside a 1-PMW optical feedback cavity (`A1`,
+  2 compiled $2.5\text{ mm}$ MgO:LN/SRN BPM chips, $F_n \ge 0.99996$, field equiv.\
+  $5.9\times 10^{-6}$) yields $62.4\%$ accuracy ($\text{FD} = 0.325$, $69.9$ useful ph
+  at $T = 60$, $62.8\%$ at $50\text{ nm}$ roughness) with only 1 readout per step
+  ($70.7\%$ for 6 cascaded all-optical PMWs). Folding all $T = 60$ reverse steps
+  into one uninterrupted $3.0\text{ ns}$ optical burst inside a strictly passive
+  static uniform-log-SNR storage ring with complex-mode packing ($32$ complex pixel
+  modes + $32$ conditioning modes) and open-port ASE noise requires **only 1 final
+  8-port readout at $t = 0$**, reaching $67.2\%$ accuracy on 2 compiled BPM chips
+  (`B1`, $F_n \ge 0.9991$, $66.5\%$ at $50\text{ nm}$ roughness, $67.9\%$ up to
+  $\sigma_\phi = 0.10\text{ rad}$ cavity phase jitter) and **$76.9\%$ accuracy
+  ($\text{FD} = 0.297$)** on 5 compiled BPM chips (`B2`, 4-stage cascaded score
+  branch, $F_n \ge 0.9988$, $G_{\text{br}} = 14.2\text{ dB}$, $0.20\text{ nJ}$ total
+  wall-plug energy at $E_{\text{NL}} \approx 1.3\text{ fJ/mode}$ — $345\times$ below
+  6-layer O–E–O).
 
 ## Approximations and limitations
 
@@ -434,6 +452,7 @@ PYTHONPATH=. .venv/bin/python experiments/make_figures.py
 PYTHONPATH=. .venv/bin/python experiments/pub_figures.py
 PYTHONPATH=. .venv/bin/python experiments/diffusion_kl_theorem.py
 PYTHONPATH=. .venv/bin/python experiments/diffusion_mnist.py
+PYTHONPATH=. .venv/bin/python experiments/diffusion_cavity.py
 ```
 
 Developed on an NVIDIA GB10 (CUDA, Dr.Jit 1.5, Mitsuba 3.9).

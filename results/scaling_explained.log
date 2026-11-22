@@ -1,0 +1,13 @@
+required L (fit set): [(8, 661), (16, 1019), (32, 1701), (64, 2562), (128, 4174), (16, 658), (32, 1075), (16, 1768)]
+required L (test set): [(64, 0.005, 0.45, 2291)]
+fit (log factor=False): a = 0.546, b = 0.420, rms log-resid = 0.079
+fit (log factor=True): a = 0.290, b = 0.330, rms log-resid = 0.023
+  N=   8 dn=5.0e-03 NA=0.3  L_sim=    661  L_model=    674  (amp    449, info    225)  fit
+  N=  16 dn=5.0e-03 NA=0.3  L_sim=   1019  L_model=   1030  (amp    733, info    297)  fit
+  N=  32 dn=5.0e-03 NA=0.3  L_sim=   1701  L_model=   1625  (amp   1159, info    466)  fit
+  N=  64 dn=5.0e-03 NA=0.3  L_sim=   2562  L_model=   2610  (amp   1795, info    815)  fit
+  N= 128 dn=5.0e-03 NA=0.3  L_sim=   4174  L_model=   4260  (amp   2742, info   1519)  fit
+  N=  16 dn=1.0e-02 NA=0.3  L_sim=    658  L_model=    664  (amp    366, info    297)  fit
+  N=  32 dn=1.0e-02 NA=0.3  L_sim=   1075  L_model=   1045  (amp    579, info    466)  fit
+  N=  16 dn=2.5e-03 NA=0.3  L_sim=   1768  L_model=   1763  (amp   1465, info    297)  fit
+  N=  64 dn=5.0e-03 NA=0.45  L_sim=   2291  L_model=   2155  (amp   1795, info    360)  PREDICTION

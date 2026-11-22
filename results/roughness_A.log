@@ -1,0 +1,25 @@
+[A] N=16 sigma=100.0 nm Lc=0.3 um L=1000.0 um dz=0.1 um, 8 chips
+  chip 0: mean out-of-basis loss 1.009e-03
+  chip 1: mean out-of-basis loss 8.457e-04
+  chip 2: mean out-of-basis loss 8.720e-04
+  chip 3: mean out-of-basis loss 8.934e-04
+  chip 4: mean out-of-basis loss 8.903e-04
+  chip 5: mean out-of-basis loss 8.705e-04
+  chip 6: mean out-of-basis loss 8.544e-04
+  chip 7: mean out-of-basis loss 9.739e-04
+  mode  0: radiation BPM 1.972e-06  GR 1.055e-05 | intermodal BPM 1.238e-06 GR 6.019e-07
+  mode  1: radiation BPM 3.725e-05  GR 4.226e-05 | intermodal BPM 4.298e-06 GR 2.407e-06
+  mode  2: radiation BPM 9.049e-05  GR 9.532e-05 | intermodal BPM 1.090e-05 GR 5.411e-06
+  mode  3: radiation BPM 1.367e-04  GR 1.701e-04 | intermodal BPM 1.828e-05 GR 9.608e-06
+  mode  4: radiation BPM 2.250e-04  GR 2.669e-04 | intermodal BPM 2.056e-05 GR 1.499e-05
+  mode  5: radiation BPM 3.439e-04  GR 3.864e-04 | intermodal BPM 3.384e-05 GR 2.155e-05
+  mode  6: radiation BPM 4.565e-04  GR 5.295e-04 | intermodal BPM 4.845e-05 GR 2.926e-05
+  mode  7: radiation BPM 5.758e-04  GR 6.969e-04 | intermodal BPM 5.844e-05 GR 3.811e-05
+  mode  8: radiation BPM 7.800e-04  GR 8.898e-04 | intermodal BPM 6.899e-05 GR 4.808e-05
+  mode  9: radiation BPM 9.477e-04  GR 1.110e-03 | intermodal BPM 8.358e-05 GR 5.912e-05
+  mode 10: radiation BPM 1.166e-03  GR 1.358e-03 | intermodal BPM 9.870e-05 GR 7.121e-05
+  mode 11: radiation BPM 1.379e-03  GR 1.637e-03 | intermodal BPM 1.073e-04 GR 8.428e-05
+  mode 12: radiation BPM 1.587e-03  GR 1.948e-03 | intermodal BPM 1.272e-04 GR 9.826e-05
+  mode 13: radiation BPM 1.914e-03  GR 2.295e-03 | intermodal BPM 1.488e-04 GR 1.131e-04
+  mode 14: radiation BPM 2.259e-03  GR 2.681e-03 | intermodal BPM 1.467e-04 GR 1.286e-04
+  mode 15: radiation BPM 2.519e-03  GR 3.109e-03 | intermodal BPM 1.743e-04 GR 1.447e-04
